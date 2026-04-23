@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>E-Vote</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet"/>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #080a0f;
+  --surface: #10131a;
+  --surface2: #181c28;
+  --surface3: #1e2233;
+  --border: #252a3a;
+  --border2: #2e3447;
+  --accent: #00e5a0;
+  --accent2: #4f6ef7;
+  --gold: #f5c542;
+  --danger: #ff4d6a;
+  --text: #dde2f0;
+  --muted: #5c6480;
+  --r: 14px;
+}
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+body::before {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(79,110,247,.12), transparent),
+              radial-gradient(ellipse 60% 40% at 80% 110%, rgba(0,229,160,.07), transparent);
+}
+body::after {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image: linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+.wrap { position: relative; z-index: 1; max-width: 1000px; margin: 0 auto; padding: 0 20px 80px; }
+header { display: flex; align-items: center; justify-content: space-between; padding: 26px 0 18px; border-bottom: 1px solid var(--border); margin-bottom: 30px; }
+.logo { font-family: 'Bebas Neue', sans-serif; font-size: 1.9rem; letter-spacing: 4px; }
+.logo .e { color: var(--accent); } .logo .dot { color: var(--accent2); } .logo .vt { color: var(--text); }
+.badge { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 6px 16px; font-size: .78rem; color: var(--muted); letter-spacing: .5px; }
+.dot-live { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+.dot-live.on { background: var(--accent); box-shadow: 0 0 8px var(--accent); animation: blink 1.6s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+.tabs { display: flex; gap: 3px; background: var(--surface); border: 1px solid var(--border); border-radius: 13px; padding: 4px; margin-bottom: 28px; }
+.tab { flex: 1; padding: 10px 6px; border: none; background: transparent; color: var(--muted); font-family: inherit; font-size: .875rem; font-weight: 500; border-radius: 10px; cursor: pointer; transition: all .2s; }
+.tab.active { background: var(--accent); color: #000; font-weight: 700; }
+.tab:disabled { opacity: .3; cursor: not-allowed; }
+.panel { display: none; }
+.panel.active { display: block; animation: up .3s ease; }
+@keyframes up { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:none} }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 24px; margin-bottom: 18px; }
+.card-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.05rem; letter-spacing: 2px; color: var(--accent); margin-bottom: 16px; }
+.upload-zone { border: 2px dashed var(--border2); border-radius: 12px; padding: 36px 20px; text-align: center; cursor: pointer; transition: all .2s; position: relative; }
+.upload-zone:hover,.upload-zone.drag { border-color: var(--accent); background: rgba(0,229,160,.04); }
+.upload-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+.upload-icon { font-size: 2.2rem; margin-bottom: 10px; }
+.upload-zone p { color: var(--muted); font-size: .88rem; }
+.upload-zone strong { color: var(--text); }
+.voter-preview { max-height: 130px; overflow-y: auto; margin-top: 4px; }
+.chip { display: inline-flex; align-items: center; gap: 5px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 999px; padding: 3px 11px; font-size: .77rem; margin: 3px; color: var(--text); }
+.chip.voted { border-color: var(--accent); color: var(--accent); }
+.chip.voted::before { content: '✓ '; }
+/* POSITION BLOCK */
+.position-block { background: var(--surface2); border: 1px solid var(--border2); border-radius: 13px; padding: 20px; margin-bottom: 14px; transition: border-color .2s; }
+.position-block:hover { border-color: var(--border); }
+.pos-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.pos-number { width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, var(--accent2), var(--accent)); display: flex; align-items: center; justify-content: center; font-family: 'Bebas Neue', sans-serif; font-size: .9rem; color: #fff; flex-shrink: 0; }
+.pos-title-input { flex: 1; background: var(--surface3); border: 1px solid var(--border2); border-radius: 9px; padding: 9px 14px; color: var(--text); font-family: inherit; font-size: .95rem; font-weight: 600; outline: none; transition: border-color .2s; }
+.pos-title-input:focus { border-color: var(--accent2); }
+.pos-title-input::placeholder { color: var(--muted); font-weight: 400; }
+.remove-pos-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1.1rem; padding: 4px 8px; border-radius: 6px; transition: color .2s; flex-shrink: 0; }
+.remove-pos-btn:hover { color: var(--danger); }
+.candidates-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.cand-pill { display: flex; align-items: center; gap: 6px; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; padding: 7px 12px; }
+.cand-pill input { background: transparent; border: none; color: var(--text); font-family: inherit; font-size: .85rem; outline: none; width: 130px; }
+.cand-pill input::placeholder { color: var(--muted); }
+.rm-cand { background: none; border: none; color: var(--muted); cursor: pointer; font-size: .9rem; padding: 0 2px; transition: color .2s; }
+.rm-cand:hover { color: var(--danger); }
+.add-cand-btn { background: rgba(79,110,247,.12); border: 1px dashed var(--accent2); color: var(--accent2); border-radius: 8px; padding: 7px 14px; font-size: .82rem; cursor: pointer; font-family: inherit; transition: all .2s; }
+.add-cand-btn:hover { background: rgba(79,110,247,.2); }
+/* BUTTONS */
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 11px 22px; border-radius: 9px; border: none; font-family: inherit; font-size: .88rem; font-weight: 600; cursor: pointer; transition: all .18s; }
+.btn-accent { background: var(--accent); color: #000; }
+.btn-accent:hover { background: #00c98a; transform: translateY(-1px); }
+.btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border2); }
+.btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+.btn-blue { background: var(--accent2); color: #fff; }
+.btn-blue:hover { background: #3d5ce0; }
+.btn-sm { padding: 7px 13px; font-size: .8rem; }
+.btn-full { width: 100%; justify-content: center; margin-top: 12px; }
+.btn:disabled { opacity: .35; cursor: not-allowed; transform: none !important; }
+/* STATS */
+.stats-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 18px; }
+.stat-box { background: var(--surface); border: 1px solid var(--border); border-radius: 13px; padding: 16px; text-align: center; }
+.stat-num { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; color: var(--accent); line-height: 1; }
+.stat-lbl { font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1.2px; margin-top: 4px; }
+.search-box { width: 100%; background: var(--surface2); border: 1px solid var(--border2); border-radius: 10px; padding: 11px 16px; color: var(--text); font-family: inherit; font-size: .92rem; outline: none; margin-bottom: 14px; transition: border-color .2s; }
+.search-box:focus { border-color: var(--accent); }
+.voter-list { max-height: 260px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; }
+.voter-item { display: flex; align-items: center; justify-content: space-between; background: var(--surface2); border: 1px solid var(--border2); border-radius: 10px; padding: 11px 15px; cursor: pointer; transition: all .15s; font-size: .9rem; }
+.voter-item:hover { border-color: var(--accent2); background: rgba(79,110,247,.07); }
+.voter-item.sel { border-color: var(--accent2); background: rgba(79,110,247,.12); }
+.voter-item.done { opacity: .38; cursor: not-allowed; pointer-events: none; }
+/* BALLOT */
+.vote-position-block { margin-bottom: 14px; border: 2px solid var(--border2); border-radius: 13px; overflow: hidden; transition: border-color .2s; }
+.vote-position-block.completed { border-color: var(--accent); }
+.vp-header { display: flex; align-items: center; justify-content: space-between; padding: 13px 18px; background: var(--surface2); flex-wrap: wrap; gap: 8px; }
+.vp-title { font-weight: 700; font-size: .95rem; display: flex; align-items: center; gap: 10px; }
+.vp-badge { font-size: .72rem; padding: 3px 10px; border-radius: 999px; font-weight: 600; }
+.vp-badge.pending { background: rgba(92,100,128,.2); color: var(--muted); border: 1px solid var(--border2); }
+.vp-badge.done { background: rgba(0,229,160,.15); color: var(--accent); border: 1px solid var(--accent); }
+.vp-body { padding: 16px 18px; background: var(--surface); }
+.cand-vote-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+.cand-vote-card { background: var(--surface2); border: 2px solid var(--border2); border-radius: 12px; padding: 16px 12px; text-align: center; cursor: pointer; transition: all .18s; user-select: none; }
+.cand-vote-card:hover { border-color: var(--accent2); transform: translateY(-2px); }
+.cand-vote-card.sel { border-color: var(--accent); background: rgba(0,229,160,.07); }
+.cand-avatar { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Bebas Neue', sans-serif; font-size: 1rem; color: #fff; margin: 0 auto 8px; }
+.cand-vote-name { font-weight: 600; font-size: .85rem; }
+/* PROGRESS */
+.ballot-progress-wrap { margin-top: 14px; }
+.ballot-progress-label { display: flex; justify-content: space-between; font-size: .78rem; color: var(--muted); margin-bottom: 5px; }
+.election-progress { background: var(--surface2); border-radius: 999px; height: 6px; overflow: hidden; }
+.election-progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent2), var(--accent)); border-radius: 999px; transition: width .5s ease; }
+/* RESULTS */
+.leaders-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+.leader-card { border: 1px solid var(--accent2); border-radius: 13px; padding: 16px; text-align: center; display: none; background: linear-gradient(135deg, rgba(79,110,247,.1), rgba(0,229,160,.07)); }
+.leader-card.show { display: block; animation: up .4s ease; }
+.leader-pos { font-size: .68rem; color: var(--accent2); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 4px; }
+.leader-trophy { font-size: 1.3rem; }
+.leader-name { font-family: 'Bebas Neue', sans-serif; font-size: 1.25rem; letter-spacing: 1.5px; margin-top: 4px; }
+.leader-votes { font-size: .76rem; color: var(--muted); margin-top: 2px; }
+.results-position-block { margin-bottom: 22px; }
+.rp-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.05rem; letter-spacing: 2px; color: var(--text); margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
+.rp-divider { flex: 1; height: 1px; background: var(--border); }
+.result-row { margin-bottom: 12px; }
+.result-meta { display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px; }
+.result-name { font-weight: 600; font-size: .9rem; }
+.result-votes { font-family: 'Bebas Neue', sans-serif; font-size: 1rem; color: var(--accent); letter-spacing: 1px; }
+.bar-track { background: var(--surface2); border-radius: 999px; height: 8px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--accent2), var(--accent)); transition: width .7s cubic-bezier(.22,1,.36,1); }
+.result-pct { font-size: .74rem; color: var(--muted); margin-top: 3px; text-align: right; }
+.toast { position: fixed; bottom: 26px; right: 24px; z-index: 999; background: var(--surface); border: 1px solid var(--accent); border-radius: 10px; padding: 13px 20px; font-size: .88rem; box-shadow: 0 10px 40px rgba(0,0,0,.6); display: none; max-width: 320px; }
+.toast.show { display: block; animation: up .3s ease; }
+.hint { font-size: .8rem; color: var(--muted); margin-bottom: 14px; }
+.flex-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+::-webkit-scrollbar { width: 5px; } ::-webkit-scrollbar-track { background: var(--surface2); } ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="logo"><span class="e">E</span><span class="dot">·</span><span class="vt">VOTE</span></div>
+    <div class="badge">
+      <span class="dot-live" id="liveDot"></span>
+      <span id="liveLabel">Setup</span>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" id="tab-setup" onclick="switchTab('setup')">⚙ Setup</button>
+    <button class="tab" id="tab-vote" onclick="switchTab('vote')" disabled>🗳 Vote</button>
+    <button class="tab" id="tab-results" onclick="switchTab('results')" disabled>📊 Results</button>
+  </div>
+
+  <!-- ══════════ SETUP ══════════ -->
+  <div class="panel active" id="panel-setup">
+
+    <div class="card">
+      <div class="card-title">📋 Voter List</div>
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="voterFile" accept=".csv,.txt" onchange="handleFileUpload(event)"/>
+        <div class="upload-icon">📂</div>
+        <p><strong>Drop your CSV or TXT file here</strong></p>
+        <p style="margin-top:5px">One name per line, or comma-separated</p>
+      </div>
+      <div id="voterPreviewWrap" style="display:none;margin-top:14px;">
+        <div class="flex-row">
+          <span style="font-weight:600;" id="voterCount">0 voters loaded</span>
+          <button class="btn btn-outline btn-sm" onclick="clearVoters()">Clear</button>
+        </div>
+        <div class="voter-preview" id="voterPreview"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🏛 Positions &amp; Candidates</div>
+      <p class="hint">Each box represents a position (e.g. President). Add the candidates contesting that position inside it. You can have up to 10 positions.</p>
+      <div id="positionsContainer"></div>
+      <div style="display:flex;gap:10px;margin-top:6px;flex-wrap:wrap;">
+        <button class="btn btn-blue btn-sm" onclick="addPositionBlock()">+ Add Position</button>
+      </div>
+    </div>
+
+    <button class="btn btn-accent btn-full" onclick="startElection()">🚀 Start Election</button>
+  </div>
+
+  <!-- ══════════ VOTE ══════════ -->
+  <div class="panel" id="panel-vote">
+    <div class="stats-row">
+      <div class="stat-box"><div class="stat-num" id="statTotal">0</div><div class="stat-lbl">Total Votes</div></div>
+      <div class="stat-box"><div class="stat-num" id="statRemaining">0</div><div class="stat-lbl">Yet to Vote</div></div>
+      <div class="stat-box"><div class="stat-num" id="statPct">0%</div><div class="stat-lbl">Turnout</div></div>
+    </div>
+
+    <div class="card" id="voterSelectCard">
+      <div class="card-title">👤 Step 1 — Select Your Name</div>
+      <input type="text" class="search-box" id="voterSearch" placeholder="Search your name…" oninput="filterVoters()"/>
+      <div class="voter-list" id="voterListEl"></div>
+    </div>
+
+    <div id="ballotCard" style="display:none;">
+      <div class="card" style="margin-bottom:14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+          <div>
+            <div style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Casting ballot for</div>
+            <div style="font-weight:700;font-size:1.05rem;" id="ballotVoterName">—</div>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="cancelVote()">✕ Cancel</button>
+        </div>
+        <div class="ballot-progress-wrap">
+          <div class="ballot-progress-label">
+            <span>Ballot progress</span>
+            <span id="ballotProgressTxt">0 / 0 positions</span>
+          </div>
+          <div class="election-progress"><div class="election-progress-fill" id="ballotProgressBar" style="width:0%"></div></div>
+        </div>
+      </div>
+
+      <div id="ballotPositions"></div>
+
+      <button class="btn btn-accent btn-full" id="submitBallotBtn" onclick="submitBallot()" disabled>✓ Submit Ballot</button>
+    </div>
+  </div>
+
+  <!-- ══════════ RESULTS ══════════ -->
+  <div class="panel" id="panel-results">
+    <div class="stats-row">
+      <div class="stat-box"><div class="stat-num" id="rTotal">0</div><div class="stat-lbl">Total Votes</div></div>
+      <div class="stat-box"><div class="stat-num" id="rVoters">0</div><div class="stat-lbl">Registered</div></div>
+      <div class="stat-box"><div class="stat-num" id="rPct">0%</div><div class="stat-lbl">Turnout</div></div>
+    </div>
+
+    <div class="card" style="margin-bottom:20px;">
+      <div class="card-title">🏆 Current Leaders</div>
+      <div class="leaders-grid" id="leadersGrid"></div>
+      <div id="noVotesYet" style="color:var(--muted);font-size:.88rem;text-align:center;padding:10px 0;">No votes cast yet.</div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:8px;">
+        <div class="card-title" style="margin-bottom:0;">Live Breakdown by Position</div>
+        <div style="font-size:.76rem;color:var(--muted);" id="lastUpdated">—</div>
+      </div>
+      <div id="resultsEl"></div>
+    </div>
+
+    <button class="btn btn-outline" onclick="switchTab('vote')" style="margin-top:4px;">← Back to Voting</button>
+  </div>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+let voters = [];
+let positions = [];
+let selectedVoterIdx = null;
+let ballotSelections = {};
+
+const COLORS = [
+  ['#4f6ef7','#00e5a0'],['#f7764f','#f5c542'],['#a855f7','#ec4899'],
+  ['#06b6d4','#3b82f6'],['#f59e0b','#ef4444'],['#10b981','#06b6d4'],
+  ['#8b5cf6','#f97316'],['#e11d48','#f472b6'],['#0ea5e9','#22d3ee'],['#84cc16','#22c55e']
+];
+
+// ── SETUP ──
+function addPositionBlock(title='', cands=['','']) {
+  const container = document.getElementById('positionsContainer');
+  if (container.children.length >= 10) { showToast('Max 10 positions allowed.'); return; }
+  const idx = Date.now(); // unique key
+  const block = document.createElement('div');
+  block.className = 'position-block';
+  block.dataset.id = idx;
+
+  const colorIdx = container.children.length % COLORS.length;
+  const [c1,c2] = COLORS[colorIdx];
+  const num = container.children.length + 1;
+
+  block.innerHTML = `
+    <div class="pos-header">
+      <div class="pos-number" style="background:linear-gradient(135deg,${c1},${c2})">${num}</div>
+      <input type="text" class="pos-title-input" placeholder="e.g. President, Secretary, Treasurer…" value="${title}"/>
+      <button class="remove-pos-btn" onclick="removePosition(this)">✕</button>
+    </div>
+    <div class="candidates-row" id="cr-${idx}">
+      ${cands.map((c,ci)=>candPillHTML(ci+1,c)).join('')}
+      <button class="add-cand-btn" onclick="addCandidate('${idx}')">+ Candidate</button>
+    </div>
+  `;
+  container.appendChild(block);
+  renumber();
+}
+
+function candPillHTML(n, val='') {
+  return `<div class="cand-pill">
+    <input type="text" placeholder="Candidate ${n}" value="${val}" class="cand-name-input"/>
+    <button class="rm-cand" onclick="this.closest('.cand-pill').remove()">✕</button>
+  </div>`;
+}
+
+function addCandidate(rowId) {
+  const row = document.getElementById('cr-' + rowId);
+  const count = row.querySelectorAll('.cand-pill').length;
+  if (count >= 10) { showToast('Max 10 candidates per position.'); return; }
+  const pill = document.createElement('div');
+  pill.innerHTML = candPillHTML(count+1);
+  row.insertBefore(pill.firstElementChild, row.querySelector('.add-cand-btn'));
+}
+
+function removePosition(btn) {
+  btn.closest('.position-block').remove();
+  renumber();
+}
+
+function renumber() {
+  document.querySelectorAll('.position-block').forEach((b,i) => {
+    b.querySelector('.pos-number').textContent = i+1;
+  });
+}
+
+function initDefaults() {
+  [['President',['','']],['Vice President',['','']],['Secretary',['','']]].forEach(([t,c])=>addPositionBlock(t,c));
+}
+
+// ── FILE UPLOAD ──
+function handleFileUpload(e) {
+  const file = e.target.files[0]; if(!file) return;
+  const r = new FileReader();
+  r.onload = ev => loadVoters(ev.target.result.split(/[\n,]+/).map(s=>s.trim()).filter(Boolean));
+  r.readAsText(file);
+}
+function loadVoters(names) {
+  voters = names.map(n=>({name:n,voted:false}));
+  const preview = document.getElementById('voterPreview');
+  preview.innerHTML = '';
+  voters.forEach(v=>{ const c=document.createElement('span'); c.className='chip'; c.textContent=v.name; preview.appendChild(c); });
+  document.getElementById('voterCount').textContent = `${voters.length} voter${voters.length!==1?'s':''} loaded`;
+  document.getElementById('voterPreviewWrap').style.display = 'block';
+}
+function clearVoters() {
+  voters = [];
+  document.getElementById('voterPreviewWrap').style.display='none';
+  document.getElementById('voterFile').value='';
+}
+
+// ── START ELECTION ──
+function startElection() {
+  if (voters.length < 1) { showToast('Please upload at least 1 voter.'); return; }
+  const blocks = document.querySelectorAll('.position-block');
+  if (!blocks.length) { showToast('Please add at least one position.'); return; }
+  positions = [];
+  let ok = true;
+  blocks.forEach((block,i) => {
+    const title = block.querySelector('.pos-title-input').value.trim();
+    if (!title) { showToast(`Position ${i+1} needs a title.`); ok=false; return; }
+    const names = [...block.querySelectorAll('.cand-name-input')].map(x=>x.value.trim()).filter(Boolean);
+    const unique = [...new Set(names)];
+    if (unique.length < 2) { showToast(`"${title}" needs at least 2 candidates.`); ok=false; return; }
+    positions.push({ title, candidates: unique.map(name=>({name,votes:0})) });
+  });
+  if (!ok) return;
+  document.getElementById('tab-vote').disabled=false;
+  document.getElementById('tab-results').disabled=false;
+  document.getElementById('liveDot').classList.add('on');
+  document.getElementById('liveLabel').textContent='Election Live';
+  renderVoterList();
+  renderResults();
+  switchTab('vote');
+  showToast('🚀 Election started!');
+}
+
+// ── VOTING ──
+function renderVoterList(filter='') {
+  const el = document.getElementById('voterListEl');
+  el.innerHTML='';
+  const lower = filter.toLowerCase();
+  voters.forEach((v,i)=>{
+    if(lower && !v.name.toLowerCase().includes(lower)) return;
+    const div=document.createElement('div');
+    div.className='voter-item'+(v.voted?' done':'')+(selectedVoterIdx===i?' sel':'');
+    div.innerHTML=`<span>${v.name}</span>${v.voted?'<span style="font-size:.74rem;color:var(--accent)">Voted ✓</span>':'<span style="font-size:.74rem;color:var(--muted)">→ Select</span>'}`;
+    if(!v.voted) div.onclick=()=>openBallot(i);
+    el.appendChild(div);
+  });
+}
+function filterVoters(){ renderVoterList(document.getElementById('voterSearch').value); }
+
+function openBallot(idx) {
+  selectedVoterIdx=idx;
+  ballotSelections={};
+  document.getElementById('ballotVoterName').textContent=voters[idx].name;
+  document.getElementById('voterSelectCard').style.display='none';
+  document.getElementById('ballotCard').style.display='block';
+  renderBallot();
+}
+
+function renderBallot() {
+  const container = document.getElementById('ballotPositions');
+  container.innerHTML='';
+  const total=positions.length;
+  const done=Object.keys(ballotSelections).length;
+  document.getElementById('ballotProgressTxt').textContent=`${done} / ${total} position${total!==1?'s':''}`;
+  document.getElementById('ballotProgressBar').style.width=total?(done/total*100)+'%':'0%';
+  document.getElementById('submitBallotBtn').disabled=done<total;
+
+  positions.forEach((pos,pi)=>{
+    const isSel=ballotSelections[pi]!==undefined;
+    const [c1,c2]=COLORS[pi%COLORS.length];
+    const block=document.createElement('div');
+    block.className='vote-position-block'+(isSel?' completed':'');
+    const cards=pos.candidates.map((c,ci)=>{
+      const initials=c.name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+      const sel=ballotSelections[pi]===ci;
+      return `<div class="cand-vote-card${sel?' sel':''}" onclick="pickCandidate(${pi},${ci})">
+        <div class="cand-avatar" style="background:linear-gradient(135deg,${c1},${c2})">${initials}</div>
+        <div class="cand-vote-name">${c.name}</div>
+        ${sel?'<div style="font-size:.68rem;color:var(--accent);margin-top:5px;font-weight:700;">✓ Selected</div>':''}
+      </div>`;
+    }).join('');
+    block.innerHTML=`
+      <div class="vp-header">
+        <div class="vp-title">
+          <span style="width:22px;height:22px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;color:#fff;background:linear-gradient(135deg,${c1},${c2});flex-shrink:0">${pi+1}</span>
+          ${pos.title}
+        </div>
+        <span class="vp-badge ${isSel?'done':'pending'}">${isSel?'✓ '+pos.candidates[ballotSelections[pi]].name:'Select one'}</span>
+      </div>
+      <div class="vp-body"><div class="cand-vote-grid">${cards}</div></div>`;
+    container.appendChild(block);
+  });
+}
+
+function pickCandidate(pi,ci){ ballotSelections[pi]=ci; renderBallot(); }
+
+function submitBallot() {
+  if(selectedVoterIdx===null) return;
+  if(Object.keys(ballotSelections).length<positions.length){ showToast('Please vote for all positions first.'); return; }
+  voters[selectedVoterIdx].voted=true;
+  Object.entries(ballotSelections).forEach(([pi,ci])=>{ positions[pi].candidates[ci].votes++; });
+  const name=voters[selectedVoterIdx].name;
+  showToast(`✅ Ballot submitted for ${name}`);
+  selectedVoterIdx=null; ballotSelections={};
+  document.getElementById('voterSearch').value='';
+  document.getElementById('ballotCard').style.display='none';
+  document.getElementById('voterSelectCard').style.display='block';
+  renderVoterList(); updateStats(); renderResults(); updateChips();
+}
+
+function cancelVote() {
+  selectedVoterIdx=null; ballotSelections={};
+  document.getElementById('ballotCard').style.display='none';
+  document.getElementById('voterSelectCard').style.display='block';
+  renderVoterList();
+}
+
+function updateStats() {
+  const totalVotes=positions.reduce((s,p)=>s+p.candidates.reduce((a,c)=>a+c.votes,0),0);
+  const votedCount=voters.filter(v=>v.voted).length;
+  const remaining=voters.length-votedCount;
+  const pct=voters.length?Math.round(votedCount/voters.length*100):0;
+  document.getElementById('statTotal').textContent=totalVotes;
+  document.getElementById('statRemaining').textContent=remaining;
+  document.getElementById('statPct').textContent=pct+'%';
+}
+
+function updateChips() {
+  document.querySelectorAll('#voterPreview .chip').forEach((chip,i)=>{ if(voters[i]&&voters[i].voted) chip.classList.add('voted'); });
+}
+
+// ── RESULTS ──
+function renderResults() {
+  const votedCount=voters.filter(v=>v.voted).length;
+  const totalVotes=positions.reduce((s,p)=>s+p.candidates.reduce((a,c)=>a+c.votes,0),0);
+  const pct=voters.length?Math.round(votedCount/voters.length*100):0;
+  document.getElementById('rTotal').textContent=totalVotes;
+  document.getElementById('rVoters').textContent=voters.length;
+  document.getElementById('rPct').textContent=pct+'%';
+  document.getElementById('lastUpdated').textContent='Updated: '+new Date().toLocaleTimeString();
+
+  // leaders
+  const lg=document.getElementById('leadersGrid'); lg.innerHTML='';
+  let anyVotes=false;
+  positions.forEach((pos,pi)=>{
+    const tot=pos.candidates.reduce((s,c)=>s+c.votes,0);
+    const [c1]=COLORS[pi%COLORS.length];
+    const card=document.createElement('div');
+    card.className='leader-card';
+    if(tot>0){
+      anyVotes=true;
+      const leader=[...pos.candidates].sort((a,b)=>b.votes-a.votes)[0];
+      card.classList.add('show');
+      card.style.borderColor=c1;
+      card.innerHTML=`<div class="leader-pos">${pos.title}</div><div class="leader-trophy">🏆</div><div class="leader-name">${leader.name}</div><div class="leader-votes">${leader.votes} vote${leader.votes!==1?'s':''}</div>`;
+    }
+    lg.appendChild(card);
+  });
+  document.getElementById('noVotesYet').style.display=anyVotes?'none':'block';
+
+  // breakdown
+  const el=document.getElementById('resultsEl'); el.innerHTML='';
+  positions.forEach((pos,pi)=>{
+    const tot=pos.candidates.reduce((s,c)=>s+c.votes,0);
+    const sorted=[...pos.candidates].sort((a,b)=>b.votes-a.votes);
+    const [c1,c2]=COLORS[pi%COLORS.length];
+    const block=document.createElement('div');
+    block.className='results-position-block';
+    const rows=sorted.map((c,ri)=>{
+      const pct=tot?Math.round(c.votes/tot*100):0;
+      const lead=ri===0&&tot>0;
+      return `<div class="result-row">
+        <div class="result-meta">
+          <span class="result-name">${lead?'🏆 ':''}${c.name}</span>
+          <span class="result-votes">${c.votes} vote${c.votes!==1?'s':''}</span>
+        </div>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct}%;${lead?`background:linear-gradient(90deg,${c1},${c2})`:''}"></div></div>
+        <div class="result-pct">${pct}% of ${tot} cast</div>
+      </div>`;
+    }).join('');
+    block.innerHTML=`
+      <div class="rp-title">
+        <span style="width:24px;height:24px;border-radius:7px;display:inline-flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;color:#fff;background:linear-gradient(135deg,${c1},${c2})">${pi+1}</span>
+        ${pos.title}
+        <span class="rp-divider"></span>
+        <span style="font-size:.75rem;color:var(--muted);font-family:'DM Sans',sans-serif;letter-spacing:0;font-weight:400;">${tot} vote${tot!==1?'s':''} cast</span>
+      </div>${rows}`;
+    el.appendChild(block);
+    if(pi<positions.length-1){
+      const hr=document.createElement('hr');
+      hr.style.cssText='border:none;border-top:1px solid var(--border);margin:18px 0;';
+      el.appendChild(hr);
+    }
+  });
+}
+
+// ── TABS ──
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  document.getElementById('panel-'+name).classList.add('active');
+  if(name==='results') renderResults();
+}
+
+// ── TOAST ──
+let toastTimer;
+function showToast(msg) {
+  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),3200);
+}
+
+// ── DRAG DROP ──
+const zone=document.getElementById('uploadZone');
+zone.addEventListener('dragover',e=>{e.preventDefault();zone.classList.add('drag');});
+zone.addEventListener('dragleave',()=>zone.classList.remove('drag'));
+zone.addEventListener('drop',e=>{
+  e.preventDefault();zone.classList.remove('drag');
+  const file=e.dataTransfer.files[0];
+  if(file){const r=new FileReader();r.onload=ev=>loadVoters(ev.target.result.split(/[\n,]+/).map(s=>s.trim()).filter(Boolean));r.readAsText(file);}
+});
+
+// ── INIT ──
+initDefaults();
+</script>
+</body>
+</html>
